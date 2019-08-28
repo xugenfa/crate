@@ -110,7 +110,6 @@ public class LogicalPlanner {
 
     public LogicalPlanner(Functions functions, TableStats tableStats) {
         this.optimizer = new Optimizer(List.of(
-            new RemoveRedundantFetchOrEval(),
             new MergeAggregateAndCollectToCount(),
             new MergeFilters(),
             new MoveFilterBeneathBoundary(),
