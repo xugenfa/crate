@@ -53,6 +53,7 @@ import io.crate.sql.tree.BetweenPredicate;
 import io.crate.sql.tree.BooleanLiteral;
 import io.crate.sql.tree.Cast;
 import io.crate.sql.tree.CharFilters;
+import io.crate.sql.tree.CheckConstraint;
 import io.crate.sql.tree.ClusteredBy;
 import io.crate.sql.tree.CollectionColumnType;
 import io.crate.sql.tree.ColumnConstraint;
@@ -784,6 +785,24 @@ class AstBuilder extends SqlBaseBaseVisitor<Node> {
     @Override
     public Node visitPrimaryKeyConstraint(SqlBaseParser.PrimaryKeyConstraintContext context) {
         return new PrimaryKeyConstraint<>(visitCollection(context.columns().primaryExpression(), Expression.class));
+    }
+
+    @Override
+    public Node visitTableCheckConstraint(SqlBaseParser.TableCheckConstraintContext context) {
+        SqlBaseParser.CheckConstraintContext ctx = context.checkConstraint();
+        String name = getIdentText(ctx.name);
+        Expression expression = (Expression) visit(ctx.expression);
+        return new CheckConstraint(name, expression);
+    }
+
+    @Override
+    public Node visitColumnCheckConstraint(SqlBaseParser.ColumnCheckConstraintContext context) {
+//        SqlBaseParser.CheckConstraintContext ctx = context.checkConstraint();
+//        String name = getIdentText(ctx.name);
+//        Expression expression = (Expression) visit(ctx.expression);
+//        SqlBaseParser.ColumnDefinitionContext columnCtx = (SqlBaseParser.ColumnDefinitionContext) context.parent;
+//        String columnName = getIdentText(columnCtx.ident());
+        return null;
     }
 
     @Override

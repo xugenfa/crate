@@ -36,6 +36,8 @@ import io.crate.metadata.Reference;
 import io.crate.metadata.ReferenceIdent;
 import io.crate.metadata.RelationName;
 import io.crate.metadata.RowGranularity;
+import io.crate.sql.tree.CheckConstraint;
+import io.crate.sql.tree.Expression;
 import io.crate.types.ArrayType;
 import io.crate.types.DataType;
 import io.crate.types.DataTypes;
@@ -62,6 +64,7 @@ public class AnalyzedTableElements<T> {
     private Map<ColumnIdent, DataType> columnTypes = new HashMap<>();
     private Set<String> primaryKeys;
     private Set<String> notNullColumns;
+    private Set<CheckConstraint> checkConstraints = new LinkedHashSet<>();
     private List<List<String>> partitionedBy;
     private int numGeneratedColumns = 0;
 
@@ -81,6 +84,7 @@ public class AnalyzedTableElements<T> {
                                   Map<ColumnIdent, DataType> columnTypes,
                                   Set<String> primaryKeys,
                                   Set<String> notNullColumns,
+                                  Set<CheckConstraint> checkConstraints,
                                   List<List<String>> partitionedBy,
                                   int numGeneratedColumns,
                                   List<T> additionalPrimaryKeys,
@@ -91,6 +95,7 @@ public class AnalyzedTableElements<T> {
         this.columnTypes = columnTypes;
         this.primaryKeys = primaryKeys;
         this.notNullColumns = notNullColumns;
+        this.checkConstraints = checkConstraints;
         this.partitionedBy = partitionedBy;
         this.numGeneratedColumns = numGeneratedColumns;
         this.additionalPrimaryKeys = additionalPrimaryKeys;
@@ -128,6 +133,9 @@ public class AnalyzedTableElements<T> {
             Map<String, Object> constraints = new HashMap<>();
             constraints.put("not_null", notNullColumns(elements));
             meta.put("constraints", constraints);
+        }
+        if (!elements.checkConstraints.isEmpty()) {
+            meta.put("check_constraints", elements.checkConstraints);
         }
 
         mapping.put("_meta", meta);
@@ -172,6 +180,7 @@ public class AnalyzedTableElements<T> {
             columnTypes,
             primaryKeys,
             notNullColumns,
+            checkConstraints,
             partitionedBy,
             numGeneratedColumns,
             additionalPrimaryKeys,
@@ -309,6 +318,7 @@ public class AnalyzedTableElements<T> {
         }
         validateIndexDefinitions(relationName, tableElementsEvaluated);
         validatePrimaryKeys(relationName, tableElementsEvaluated);
+
         return toMapping(tableElementsEvaluated);
     }
 
@@ -319,6 +329,12 @@ public class AnalyzedTableElements<T> {
                 tableElementsWithExpressionSymbols.columns.get(i),
                 tableElementsEvaluated.columns.get(i)
             );
+        }
+        for (CheckConstraint check : tableElementsWithExpressionSymbols.checkConstraints()) {
+            Expression expression = check.expression();
+
+
+
         }
     }
 
@@ -560,6 +576,10 @@ public class AnalyzedTableElements<T> {
 
     public List<AnalyzedColumnDefinition<T>> columns() {
         return columns;
+    }
+
+    public Set<CheckConstraint> checkConstraints() {
+        return checkConstraints;
     }
 
     public boolean hasGeneratedColumns() {

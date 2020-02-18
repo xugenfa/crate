@@ -330,6 +330,24 @@ public class DDLIntegrationTest extends SQLTransportIntegrationTest {
     }
 
     @Test
+    public void testCreateTableWithTableCheck() {
+        execute("create table t (" +
+                "id integer, " +
+                "qty integer," +
+                "primary key ( id )," +
+                "check(qty > 0)" +
+                ")");
+    }
+
+//    @Test
+//    public void testCreateTableWithColumnCheck() {
+//        execute("create table t (" +
+//                "id integer primary key, " +
+//                "qty integer check(qty > 100)" +
+//                ")");
+//    }
+
+    @Test
     public void testAlterTable() throws Exception {
         execute("create table test (col1 int) with (number_of_replicas='0-all')");
         ensureYellow();
