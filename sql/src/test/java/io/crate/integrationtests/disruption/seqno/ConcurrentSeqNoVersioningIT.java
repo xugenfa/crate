@@ -34,9 +34,12 @@ import org.elasticsearch.common.io.stream.NamedWriteableAwareStreamInput;
 import org.elasticsearch.common.io.stream.NamedWriteableRegistry;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
+import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.test.ESIntegTestCase;
 import org.elasticsearch.test.disruption.ServiceDisruptionScheme;
+import org.elasticsearch.threadpool.Scheduler;
+import org.elasticsearch.threadpool.ThreadPool;
 import org.junit.Test;
 
 import java.io.FileInputStream;
@@ -50,8 +53,10 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -432,13 +437,29 @@ public class ConcurrentSeqNoVersioningIT extends AbstractDisruptionTestCase {
             logger.info("--> Linearizability checking history of size: {} for key: {} and initialVersion: {}: {}", history.size(),
                         id, initialVersion, history);
             LinearizabilityChecker.SequentialSpec spec = new CASSequentialSpec(initialVersion);
-            boolean linearizable = new LinearizabilityChecker().isLinearizable(spec, history, missingResponseGenerator());
-            // implicitly test that we can serialize all histories.
-            String serializedHistory = base64Serialize(history);
-            if (linearizable == false) {
-                // we dump base64 encoded data, since the nature of this test is that it does not reproduce even with same seed.
-                logger.error("Linearizability check failed. Spec: {}, initial version: {}, serialized history: {}", spec, initialVersion,
-                             serializedHistory);
+
+            boolean linearizable = false;
+            try {
+                final ScheduledThreadPoolExecutor scheduler = Scheduler.initScheduler(Settings.EMPTY);
+                final AtomicBoolean abort = new AtomicBoolean();
+                // Large histories can be problematic and have the linearizability checker run OOM
+                // Bound the time how long the checker can run on such histories (Values empirically determined)
+                if (history.size() > 300) {
+                    scheduler.schedule(() -> abort.set(true), 10, TimeUnit.SECONDS);
+                }
+                linearizable = new LinearizabilityChecker().isLinearizable(spec, history, missingResponseGenerator(), abort::get);
+                ThreadPool.terminate(scheduler, 1, TimeUnit.SECONDS);
+                if (abort.get() && linearizable == false) {
+                    linearizable = true; // let the test pass
+                }
+            } finally {
+                // implicitly test that we can serialize all histories.
+                String serializedHistory = base64Serialize(history);
+                if (linearizable == false) {
+                    // we dump base64 encoded data, since the nature of this test is that it does not reproduce even with same seed.
+                    logger.error("Linearizability check failed. Spec: {}, initial version: {}, serialized history: {}",
+                                 spec, initialVersion, serializedHistory);
+                }
             }
             assertTrue("Must be linearizable", linearizable);
         }
