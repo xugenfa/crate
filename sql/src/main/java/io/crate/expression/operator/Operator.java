@@ -32,6 +32,7 @@ import io.crate.metadata.FunctionIdent;
 import io.crate.metadata.FunctionInfo;
 import io.crate.metadata.Scalar;
 import io.crate.metadata.TransactionContext;
+import io.crate.types.BooleanType;
 import io.crate.types.DataType;
 import io.crate.types.DataTypes;
 
@@ -39,7 +40,7 @@ import java.util.Locale;
 
 public abstract class Operator<I> extends Scalar<Boolean, I> implements OperatorFormatSpec {
 
-    public static final io.crate.types.DataType RETURN_TYPE = DataTypes.BOOLEAN;
+    public static final BooleanType RETURN_TYPE = DataTypes.BOOLEAN;
     public static final String PREFIX = "op_";
 
     @Override
@@ -54,7 +55,7 @@ public abstract class Operator<I> extends Scalar<Boolean, I> implements Operator
         // let's handle this here to prevent unnecessary collect operations
         for (Symbol symbol : function.arguments()) {
             if (symbol instanceof Input && ((Input<?>) symbol).value() == null) {
-                return Literal.NULL;
+                return Literal.of(RETURN_TYPE, null);
             }
         }
         return super.normalizeSymbol(function, txnCtx);
