@@ -204,6 +204,11 @@ public class Symbols {
         }
 
         @Override
+        public Boolean visitAlias(AliasSymbol aliasSymbol, Void context) {
+            return aliasSymbol.symbol().accept(this, context);
+        }
+
+        @Override
         public Boolean visitSymbol(Symbol symbol, Void context) {
             return false;
         }
