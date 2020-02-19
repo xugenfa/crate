@@ -125,6 +125,7 @@ quoted if used as identifiers::
     | called            |
     | case              |
     | cast              |
+    | check             |
     | column            |
     | constraint        |
     | create            |
