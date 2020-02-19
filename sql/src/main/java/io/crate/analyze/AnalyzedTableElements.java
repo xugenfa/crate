@@ -37,7 +37,6 @@ import io.crate.metadata.ReferenceIdent;
 import io.crate.metadata.RelationName;
 import io.crate.metadata.RowGranularity;
 import io.crate.sql.tree.CheckConstraint;
-import io.crate.sql.tree.Expression;
 import io.crate.types.ArrayType;
 import io.crate.types.DataType;
 import io.crate.types.DataTypes;
@@ -47,6 +46,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -64,7 +64,7 @@ public class AnalyzedTableElements<T> {
     private Map<ColumnIdent, DataType> columnTypes = new HashMap<>();
     private Set<String> primaryKeys;
     private Set<String> notNullColumns;
-    private Set<CheckConstraint> checkConstraints = new LinkedHashSet<>();
+    private Map<String, String> checkConstraints = new LinkedHashMap<>();
     private List<List<String>> partitionedBy;
     private int numGeneratedColumns = 0;
 
@@ -84,7 +84,7 @@ public class AnalyzedTableElements<T> {
                                   Map<ColumnIdent, DataType> columnTypes,
                                   Set<String> primaryKeys,
                                   Set<String> notNullColumns,
-                                  Set<CheckConstraint> checkConstraints,
+                                  Map<String, String> checkConstraints,
                                   List<List<String>> partitionedBy,
                                   int numGeneratedColumns,
                                   List<T> additionalPrimaryKeys,
@@ -330,12 +330,6 @@ public class AnalyzedTableElements<T> {
                 tableElementsEvaluated.columns.get(i)
             );
         }
-        for (CheckConstraint check : tableElementsWithExpressionSymbols.checkConstraints()) {
-            Expression expression = check.expression();
-
-
-
-        }
     }
 
     public TableReferenceResolver referenceResolver(RelationName relationName) {
@@ -578,7 +572,19 @@ public class AnalyzedTableElements<T> {
         return columns;
     }
 
-    public Set<CheckConstraint> checkConstraints() {
+    public void addCheckConstraint(RelationName relationName, CheckConstraint check) {
+        String name = check.userDefinedName();
+        if (null == name) {
+            name = check.uniqueName(relationName.fqn());
+        }
+        if (null != checkConstraints.get(name)) {
+            throw new IllegalArgumentException(String.format(
+                Locale.ENGLISH, "a check constraint of the same name is already declared [%s]", name));
+        }
+        checkConstraints.put(name, check.expressionStr());
+    }
+
+    public Map<String, String> checkConstraints() {
         return checkConstraints;
     }
 

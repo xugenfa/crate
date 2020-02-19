@@ -245,12 +245,13 @@ public class TableElementsAnalyzer {
 
         @Override
         public Void visitCheckConstraint(CheckConstraint<?> node, ColumnDefinitionContext<T> context) {
-            String name = node.name();
-            if (null == name) {
-                String tableName = context.relationName.name();
-                node.setName(tableName);
-            }
-            context.analyzedTableElements.checkConstraints().add(node);
+            context.analyzedTableElements.addCheckConstraint(context.relationName, node);
+            return null;
+        }
+
+        @Override
+        public Void visitCheckColumnConstraint(CheckConstraint<?> node, ColumnDefinitionContext<T> context) {
+            visitCheckConstraint(node, context);
             return null;
         }
 

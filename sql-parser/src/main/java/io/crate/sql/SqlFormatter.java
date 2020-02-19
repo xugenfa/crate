@@ -27,6 +27,7 @@ import io.crate.sql.tree.AliasedRelation;
 import io.crate.sql.tree.AllColumns;
 import io.crate.sql.tree.Assignment;
 import io.crate.sql.tree.AstVisitor;
+import io.crate.sql.tree.CheckConstraint;
 import io.crate.sql.tree.ClusteredBy;
 import io.crate.sql.tree.CollectionColumnType;
 import io.crate.sql.tree.ColumnConstraint;
@@ -788,6 +789,22 @@ public final class SqlFormatter {
         public Void visitPrimaryKeyConstraint(PrimaryKeyConstraint node, Integer indent) {
             builder.append("PRIMARY KEY ");
             appendFlatNodeList(node.columns(), indent);
+            return null;
+        }
+
+        @Override
+        public Void visitCheckConstraint(CheckConstraint<?> node, Integer indent) {
+            String name = node.userDefinedName();
+            if (null != name) {
+                builder.append("CONSTRAINT ").append(name).append(" ");
+            }
+            builder.append("CHECK(").append(node.expressionStr()).append(")");
+            return null;
+        }
+
+        @Override
+        public Void visitCheckColumnConstraint(CheckConstraint<?> node, Integer indent) {
+            visitCheckConstraint(node, indent);
             return null;
         }
 

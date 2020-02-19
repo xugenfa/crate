@@ -24,72 +24,63 @@ package io.crate.sql.tree;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import io.crate.sql.ExpressionFormatter;
-import org.elasticsearch.common.xcontent.ToXContent;
-import org.elasticsearch.common.xcontent.XContentBuilder;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
-import java.util.Locale;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 
-public class CheckConstraint<T> extends TableElement<T> implements ToXContent {
+public class CheckConstraint<T> extends TableElement<T> {
 
-    private static final ConcurrentMap<String, AtomicInteger> CHECK_SUFFIXES = new ConcurrentHashMap<>();
+    private final String userDefinedName;
+    private final String columnName;
+    private final Expression expression;
+    private final String expressionStr;
 
-    private static String uniqueName(String tableName, String columnName) {
-        if (null == tableName || tableName.isEmpty()) {
-            throw new IllegalArgumentException("tableName cannot be null or empty");
+    public CheckConstraint(@Nullable String userDefinedName,
+                           @Nullable String columnName,
+                           Expression expression) {
+        this.userDefinedName = userDefinedName;
+        this.columnName = columnName;
+        this.expression = expression;
+        this.expressionStr = ExpressionFormatter.formatStandaloneExpression(expression);
+    }
+
+    public String uniqueName(String fqTableName) {
+        if (null != userDefinedName) {
+            return userDefinedName;
         }
-        StringBuilder sb = new StringBuilder(tableName);
-        if (null != columnName && false == columnName.isEmpty()) {
+        StringBuilder sb = new StringBuilder(fqTableName.replaceAll("\\.", "_"));
+        if (null != columnName) {
             sb.append("_").append(columnName);
         }
-        sb.append("_check");
-        String prefix = sb.toString();
-        AtomicInteger count = CHECK_SUFFIXES.computeIfAbsent(prefix, k -> new AtomicInteger(1));
-        if (1 == count.get()) {
-            return prefix;
-        }
-        return sb.append("_").append(count.getAndIncrement()).toString();
+        sb.append("_check_");
+        String uuid = UUID.randomUUID().toString();
+        int idx = uuid.lastIndexOf("-");
+        sb.append(idx > 0 ? uuid.substring(idx + 1) : uuid);
+        return sb.toString();
     }
 
-
-    private String name;
-    private final Expression expression;
-
-    public CheckConstraint(@Nullable String name, Expression expression) {
-        if (null != name && CHECK_SUFFIXES.containsKey(name)) {
-            throw new IllegalArgumentException(String.format(
-                Locale.ENGLISH, "a check constraint [%s] already exists", name));
-        }
-        this.name = name;
-        this.expression = expression;
+    public String columnName() {
+        return columnName;
     }
 
-    public void setName(String tableName) {
-        setName(tableName, null);
-    }
-
-    public void setName(String tableName, String columnName) {
-        this.name = uniqueName(tableName, columnName);
-    }
-
-    public String name() {
-        return name;
+    public String userDefinedName() {
+        return userDefinedName;
     }
 
     public Expression expression() {
         return expression;
     }
 
+    public String expressionStr() {
+        return expressionStr;
+    }
+
     @Override
     public int hashCode() {
-        return Objects.hashCode(name, expression);
+        return Objects.hashCode(userDefinedName, columnName, expression);
     }
 
     @Override
@@ -102,15 +93,8 @@ public class CheckConstraint<T> extends TableElement<T> implements ToXContent {
         }
         CheckConstraint that = (CheckConstraint) o;
         return Objects.equal(expression, that.expression) &&
-               Objects.equal(name, that.name);
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-            .add("name", name)
-            .add("expression", ExpressionFormatter.formatStandaloneExpression(expression))
-            .toString();
+               Objects.equal(columnName, that.columnName) &&
+               Objects.equal(userDefinedName, that.userDefinedName);
     }
 
     @Override
@@ -120,7 +104,7 @@ public class CheckConstraint<T> extends TableElement<T> implements ToXContent {
 
     @Override
     public <U> TableElement<U> map(Function<? super T, ? extends U> mapper) {
-        return new CheckConstraint<>(name, expression);
+        return new CheckConstraint<>(userDefinedName, columnName, expression);
     }
 
     @Override
@@ -128,15 +112,11 @@ public class CheckConstraint<T> extends TableElement<T> implements ToXContent {
     }
 
     @Override
-    public boolean isFragment() {
-        return false;
-    }
-
-    @Override
-    public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-        builder.startObject();
-        builder.field(name, ExpressionFormatter.formatStandaloneExpression(expression));
-        builder.endObject();
-        return null;
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+            .add("name", userDefinedName)
+            .add("column", columnName)
+            .add("expression", expressionStr)
+            .toString();
     }
 }

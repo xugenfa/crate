@@ -334,8 +334,8 @@ public class DDLIntegrationTest extends SQLTransportIntegrationTest {
         execute("create table t (" +
                 "id integer, " +
                 "qty integer," +
-                "primary key ( id )," +
-                "check(qty > 0)" +
+                "primary key (id)," +
+                "constraint felipe check (qty > 0)" +
                 ")");
     }
 

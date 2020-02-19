@@ -787,22 +787,25 @@ class AstBuilder extends SqlBaseBaseVisitor<Node> {
         return new PrimaryKeyConstraint<>(visitCollection(context.columns().primaryExpression(), Expression.class));
     }
 
+    private Node visitCheckConstraint(SqlBaseParser.CheckConstraintContext ctx, String columnName) {
+        String name = null;
+        if (null != ctx.CONSTRAINT()) {
+            name = getIdentText(ctx.name);
+        }
+        Expression expression = (Expression) visit(ctx.expression);
+        return new CheckConstraint(name, columnName, expression);
+    }
+
     @Override
     public Node visitTableCheckConstraint(SqlBaseParser.TableCheckConstraintContext context) {
-        SqlBaseParser.CheckConstraintContext ctx = context.checkConstraint();
-        String name = getIdentText(ctx.name);
-        Expression expression = (Expression) visit(ctx.expression);
-        return new CheckConstraint(name, expression);
+        return visitCheckConstraint(context.checkConstraint(), null);
     }
 
     @Override
     public Node visitColumnCheckConstraint(SqlBaseParser.ColumnCheckConstraintContext context) {
-//        SqlBaseParser.CheckConstraintContext ctx = context.checkConstraint();
-//        String name = getIdentText(ctx.name);
-//        Expression expression = (Expression) visit(ctx.expression);
-//        SqlBaseParser.ColumnDefinitionContext columnCtx = (SqlBaseParser.ColumnDefinitionContext) context.parent;
-//        String columnName = getIdentText(columnCtx.ident());
-        return null;
+        SqlBaseParser.ColumnDefinitionContext columnCtx = (SqlBaseParser.ColumnDefinitionContext) context.parent;
+        String columnName = getIdentText(columnCtx.ident());
+        return visitCheckConstraint(context.checkConstraint(), columnName);
     }
 
     @Override
