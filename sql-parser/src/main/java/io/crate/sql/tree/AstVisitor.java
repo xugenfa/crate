@@ -364,7 +364,7 @@ public abstract class AstVisitor<R, C> {
         return visitNode(node, context);
     }
 
-    public R visitCheckColumnConstraint(CheckConstraint<?> node, C context) {
+    public R visitCheckColumnConstraint(CheckColumnConstraint<?> node, C context) {
         return visitNode(node, context);
     }
 

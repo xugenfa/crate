@@ -335,17 +335,17 @@ public class DDLIntegrationTest extends SQLTransportIntegrationTest {
                 "id integer, " +
                 "qty integer," +
                 "primary key (id)," +
-                "constraint felipe check (qty > 0)" +
+                "constraint check_1 check (qty > 0)" +
                 ")");
     }
 
-//    @Test
-//    public void testCreateTableWithColumnCheck() {
-//        execute("create table t (" +
-//                "id integer primary key, " +
-//                "qty integer check(qty > 100)" +
-//                ")");
-//    }
+    @Test
+    public void testCreateTableWithColumnCheck() {
+        execute("create table t (" +
+                "id integer primary key, " +
+                "qty integer constraint check_1 check(qty > 100)" +
+                ")");
+    }
 
     @Test
     public void testAlterTable() throws Exception {

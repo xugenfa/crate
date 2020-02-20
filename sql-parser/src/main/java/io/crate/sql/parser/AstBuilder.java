@@ -53,6 +53,7 @@ import io.crate.sql.tree.BetweenPredicate;
 import io.crate.sql.tree.BooleanLiteral;
 import io.crate.sql.tree.Cast;
 import io.crate.sql.tree.CharFilters;
+import io.crate.sql.tree.CheckColumnConstraint;
 import io.crate.sql.tree.CheckConstraint;
 import io.crate.sql.tree.ClusteredBy;
 import io.crate.sql.tree.CollectionColumnType;
@@ -793,7 +794,8 @@ class AstBuilder extends SqlBaseBaseVisitor<Node> {
             name = getIdentText(ctx.name);
         }
         Expression expression = (Expression) visit(ctx.expression);
-        return new CheckConstraint(name, columnName, expression);
+        return null == columnName ?
+            new CheckConstraint<>(name, expression) : new CheckColumnConstraint<>(name, columnName, expression);
     }
 
     @Override

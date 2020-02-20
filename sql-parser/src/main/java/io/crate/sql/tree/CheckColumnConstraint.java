@@ -1,22 +1,23 @@
 /*
- * Licensed to CRATE Technology GmbH ("Crate") under one or more contributor
- * license agreements.  See the NOTICE file distributed with this work for
- * additional information regarding copyright ownership.  Crate licenses
- * this file to you under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.  You may
+ * Licensed to Crate under one or more contributor license agreements.
+ * See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.  Crate licenses this file
+ * to you under the Apache License, Version 2.0 (the "License"); you may
+ * not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.  See the License for the specific language governing
+ * permissions and limitations under the License.
  *
  * However, if you have executed another commercial license agreement
  * with Crate these terms will supersede the license and you may use the
- * software solely pursuant to the terms of the relevant commercial agreement.
+ * software solely pursuant to the terms of the relevant commercial
+ * agreement.
  */
 
 package io.crate.sql.tree;
@@ -30,17 +31,24 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 
-public class CheckConstraint<T> extends TableElement<T> {
+public class CheckColumnConstraint<T> extends ColumnConstraint<T> {
 
     private final String userDefinedName;
+    private final String columnName;
     private final Expression expression;
     private final String expressionStr;
 
-    public CheckConstraint(@Nullable String userDefinedName,
-                           Expression expression) {
+    public CheckColumnConstraint(@Nullable String userDefinedName,
+                                 @Nullable String columnName,
+                                 Expression expression) {
         this.userDefinedName = userDefinedName;
+        this.columnName = columnName;
         this.expression = expression;
         this.expressionStr = ExpressionFormatter.formatStandaloneExpression(expression);
+    }
+
+    public String columnName() {
+        return columnName;
     }
 
     public String userDefinedName() {
@@ -57,7 +65,7 @@ public class CheckConstraint<T> extends TableElement<T> {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(userDefinedName, expression);
+        return Objects.hashCode(userDefinedName, columnName, expression);
     }
 
     @Override
@@ -65,22 +73,23 @@ public class CheckConstraint<T> extends TableElement<T> {
         if (this == o) {
             return true;
         }
-        if (null == o || false == o instanceof CheckConstraint) {
+        if (null == o || false == o instanceof CheckColumnConstraint) {
             return false;
         }
-        CheckConstraint that = (CheckConstraint) o;
+        CheckColumnConstraint that = (CheckColumnConstraint) o;
         return Objects.equal(expression, that.expression) &&
+               Objects.equal(columnName, that.columnName) &&
                Objects.equal(userDefinedName, that.userDefinedName);
     }
 
     @Override
     public <R, C> R accept(AstVisitor<R, C> visitor, C context) {
-        return visitor.visitCheckConstraint(this, context);
+        return visitor.visitCheckColumnConstraint(this, context);
     }
 
     @Override
-    public <U> TableElement<U> map(Function<? super T, ? extends U> mapper) {
-        return new CheckConstraint<>(userDefinedName, expression);
+    public <U> ColumnConstraint<U> map(Function<? super T, ? extends U> mapper) {
+        return new CheckColumnConstraint<>(userDefinedName, columnName, expression);
     }
 
     @Override
@@ -91,6 +100,7 @@ public class CheckConstraint<T> extends TableElement<T> {
     public String toString() {
         return MoreObjects.toStringHelper(this)
             .add("name", userDefinedName)
+            .add("column", columnName)
             .add("expression", expressionStr)
             .toString();
     }

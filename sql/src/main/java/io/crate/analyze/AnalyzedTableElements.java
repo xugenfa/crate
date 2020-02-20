@@ -36,6 +36,7 @@ import io.crate.metadata.Reference;
 import io.crate.metadata.ReferenceIdent;
 import io.crate.metadata.RelationName;
 import io.crate.metadata.RowGranularity;
+import io.crate.sql.tree.CheckColumnConstraint;
 import io.crate.sql.tree.CheckConstraint;
 import io.crate.types.ArrayType;
 import io.crate.types.DataType;
@@ -53,6 +54,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -572,20 +574,35 @@ public class AnalyzedTableElements<T> {
         return columns;
     }
 
-    public void addCheckConstraint(RelationName relationName, CheckConstraint check) {
-        String name = check.userDefinedName();
+    private static String uniqueCheckConstraintName(String fqTableName, String columnName) {
+        StringBuilder sb = new StringBuilder(fqTableName.replaceAll("\\.", "_"));
+        if (null != columnName) {
+            sb.append("_").append(columnName);
+        }
+        sb.append("_check_");
+        String uuid = UUID.randomUUID().toString();
+        int idx = uuid.lastIndexOf("-");
+        sb.append(idx > 0 ? uuid.substring(idx + 1) : uuid);
+        return sb.toString();
+    }
+
+    private void addCheckConstraint(String fqRelationName, String columnName, String name, String expressionStr) {
         if (null == name) {
-            name = check.uniqueName(relationName.fqn());
+            name = uniqueCheckConstraintName(fqRelationName, columnName);
         }
         if (null != checkConstraints.get(name)) {
             throw new IllegalArgumentException(String.format(
                 Locale.ENGLISH, "a check constraint of the same name is already declared [%s]", name));
         }
-        checkConstraints.put(name, check.expressionStr());
+        checkConstraints.put(name, expressionStr);
     }
 
-    public Map<String, String> checkConstraints() {
-        return checkConstraints;
+    public void addCheckConstraint(RelationName relationName, CheckConstraint check) {
+        addCheckConstraint(relationName.fqn(), null, check.userDefinedName(), check.expressionStr());
+    }
+
+    public void addCheckColumnConstraint(RelationName relationName, CheckColumnConstraint check) {
+        addCheckConstraint(relationName.fqn(), check.columnName(), check.userDefinedName(), check.expressionStr());
     }
 
     public boolean hasGeneratedColumns() {
